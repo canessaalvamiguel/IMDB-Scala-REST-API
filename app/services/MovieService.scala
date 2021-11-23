@@ -1,7 +1,7 @@
 package services
 
 import actors.MovieStorageActor
-import actors.MovieStorageActor.MovieSummary
+import actors.MovieStorageActor.{MovieNamesBySummary, MovieSummary}
 import akka.actor.{ActorSystem, Props}
 
 import javax.inject.Singleton
@@ -11,7 +11,7 @@ import scala.util.Try
 import akka.pattern.ask
 import com.google.inject.Inject
 import dao.MovieStorage
-import models.MovieSummaryAPI
+import models.{MovieNameAPI, MovieSummaryAPI}
 
 @Singleton
 class MovieService @Inject() (moviesStorage: MovieStorage){
@@ -27,6 +27,10 @@ class MovieService @Inject() (moviesStorage: MovieStorage){
 
   def getMovieSummary(filter: String) : Future[Try[Seq[MovieSummaryAPI]]] = {
       (movieStorage ?  MovieSummary(filter)).mapTo[Try[Seq[MovieSummaryAPI]]]
+  }
+
+  def getTopRatedMoviesByGenre(genre: String): Future[Try[Seq[MovieNameAPI]]] = {
+    (movieStorage ?  MovieNamesBySummary(genre)).mapTo[Try[Seq[MovieNameAPI]]]
   }
 
 }

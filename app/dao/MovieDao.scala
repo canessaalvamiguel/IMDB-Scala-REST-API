@@ -116,7 +116,31 @@ class MovieDao @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
     }
   }
 
-  def getTopRatedMoviesByGenreQuery(genre: String) = ???
+  def getTopRatedMoviesByGenreQuery(genre: String) = {
+    val movieQuery = movieList.filter(_.genres like s"%$genre%")
 
-  def getTopRatedMoviesByGenre(genre: String): Future[Try[Seq[MovieNameAPI]]] = ???
+    for{
+      (movie, rating) <- movieQuery.join(ratingList).on(_.tconst === _.tconst)
+        .sortBy(s => (s._2.averageRating.desc, s._2.numVotes.desc, s._1.originalTitle.asc))
+        .take(10)
+    }yield (movie, rating)
+
+  }
+
+  def getTopRatedMoviesByGenre(genre: String): Future[Try[Seq[MovieNameAPI]]] = {
+
+    dbConfig.db.run(getTopRatedMoviesByGenreQuery(genre).result).map{ dataTuples =>
+      val groupedByMovie = dataTuples.groupBy(_._1)
+      Success(groupedByMovie.map{
+        case (movie, tuple) =>
+          val rating = tuple.map(_._2).distinct.map{ r => r.averageRating}
+          val numVotes = tuple.map(_._2).distinct.map{ r => r.numVotes}
+          MovieNameAPI(movie.originalTitle.getOrElse(""),rating.head.getOrElse(0.0), numVotes.head.getOrElse(0))
+      }.toSeq)
+    }.recover {
+      case ex: Exception => {
+        Failure(ex)
+      }
+    }
+  }
 }
