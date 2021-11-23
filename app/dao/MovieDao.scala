@@ -117,10 +117,10 @@ class MovieDao @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   }
 
   def getTopRatedMoviesByGenreQuery(genre: String) = {
-    val movieQuery = movieList.filter(_.genres like s"%$genre%")
-
     for{
-      (movie, rating) <- movieQuery.join(ratingList).on(_.tconst === _.tconst)
+      (movie, rating) <- movieList.join(ratingList)
+        .on(_.tconst === _.tconst)
+        .filter(_._1.genres  like s"%$genre%")
         .sortBy(s => (s._2.averageRating.desc, s._2.numVotes.desc, s._1.originalTitle.asc))
         .take(10)
     }yield (movie, rating)
@@ -128,15 +128,13 @@ class MovieDao @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   }
 
   def getTopRatedMoviesByGenre(genre: String): Future[Try[Seq[MovieNameAPI]]] = {
-
     dbConfig.db.run(getTopRatedMoviesByGenreQuery(genre).result).map{ dataTuples =>
-      val groupedByMovie = dataTuples.groupBy(_._1)
-      Success(groupedByMovie.map{
+      Success(dataTuples.map{
         case (movie, tuple) =>
-          val rating = tuple.map(_._2).distinct.map{ r => r.averageRating}
-          val numVotes = tuple.map(_._2).distinct.map{ r => r.numVotes}
-          MovieNameAPI(movie.originalTitle.getOrElse(""),rating.head.getOrElse(0.0), numVotes.head.getOrElse(0))
-      }.toSeq)
+          val rating = tuple.averageRating.getOrElse(0.0)
+          val numVotes = tuple.numVotes.getOrElse(0)
+          MovieNameAPI(movie.originalTitle.getOrElse(""),rating, numVotes)
+      })
     }.recover {
       case ex: Exception => {
         Failure(ex)
