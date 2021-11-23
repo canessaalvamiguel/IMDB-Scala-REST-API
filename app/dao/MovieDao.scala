@@ -58,7 +58,53 @@ class MovieDao @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   var principalList = TableQuery[PrincipalTableDef]
   var namelList = TableQuery[NameTableDef]
 
-  def getMovieQuery(filter: String) = ???
+  def getMovieQuery(filter: String) = {
+    //val movieQuery = movieList.filter(_.primaryTitle like s"%$filter%")
+    val movieQuery = movieList.filter{
+      movie =>
+        movie.primaryTitle === filter || movie.originalTitle === filter
+    }
 
-  def getMovieSummary(filter: String): Future[Try[Seq[MovieAPI]]] = ???
+    val withPrincipalQuery = for{
+      (movie, principal) <- movieQuery.join(principalList).on(_.tconst === _.tconst)
+    }yield (movie, principal)
+
+    val withCrewQuery = for{
+      (movie, crew) <- movieQuery.join(crewList).on(_.tconst === _.tconst)
+    }yield (movie, crew)
+
+    for{
+      ((movie,_),namesPrincipal) <- withPrincipalQuery
+        .join(namelList).on(_._2.nconst === _.nconst)
+      ((_, _),namesWriters) <- withCrewQuery
+        .joinLeft(namelList).on(_._2.writers === _.nconst)
+      ((_, _),namesDirector) <- withCrewQuery
+        .joinLeft(namelList).on(_._2.directors === _.nconst)
+    }yield (movie,namesPrincipal,namesWriters,namesDirector)
+
+  }
+
+  def getMovieSummary(filter: String): Future[Try[Seq[MovieAPI]]] = {
+    dbConfig.db.run(getMovieQuery(filter).result).map{ dataTuples  =>
+      val grouperByMovie = dataTuples.groupBy(_._1)
+      Success(grouperByMovie.map {
+        case (movie,tuples) =>
+          val principals = tuples.map(_._2).distinct.map{ p => PrincipalAPI(p.nconst, p.primaryName.getOrElse(""), p.birthYear.getOrElse(0))}
+          val writers = tuples.flatMap(_._3).distinct.map{ w => CrewAPI(w.nconst, w.primaryName.getOrElse(""), w.birthYear.getOrElse(0), "writer")}
+          val directors = tuples.flatMap(_._4).distinct.map{ d => CrewAPI(d.nconst, d.primaryName.getOrElse(""), d.birthYear.getOrElse(0), "director")}
+          MovieAPI(
+            movie.tconst,
+            movie.titleType.getOrElse(""),
+            movie.primaryTitle.getOrElse(""),
+            movie.originalTitle.getOrElse(""),
+            writers ++ directors,
+            principals
+          )
+      }.toSeq)
+    }.recover {
+      case ex: Exception => {
+        Failure(ex)
+      }
+    }
+  }
 }
