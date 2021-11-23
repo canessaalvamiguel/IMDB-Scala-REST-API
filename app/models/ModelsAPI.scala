@@ -15,7 +15,7 @@ case class CrewAPI(
   role : String
 )
 
-case class MovieAPI(
+case class MovieSummaryAPI(
   tconst: String,
   titleType: String,
   primaryTitle: String,
@@ -33,5 +33,5 @@ object CrewAPI{
 }
 
 object MoviAPI{
-  implicit val movieFormat = Json.format[MovieAPI]
+  implicit val movieFormat = Json.format[MovieSummaryAPI]
 }

@@ -1,7 +1,7 @@
 package dao
 
 import com.google.inject.Inject
-import models.{CrewAPI, MovieAPI, Name, PrincipalAPI, TitleBasics, TitleCrew, TitlePrincipal}
+import models.{CrewAPI, MovieSummaryAPI, Name, PrincipalAPI, TitleBasics, TitleCrew, TitlePrincipal}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
@@ -84,7 +84,7 @@ class MovieDao @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
 
   }
 
-  def getMovieSummary(filter: String): Future[Try[Seq[MovieAPI]]] = {
+  def getMovieSummary(filter: String): Future[Try[Seq[MovieSummaryAPI]]] = {
     dbConfig.db.run(getMovieQuery(filter).result).map{ dataTuples  =>
       val grouperByMovie = dataTuples.groupBy(_._1)
       Success(grouperByMovie.map {
@@ -92,7 +92,7 @@ class MovieDao @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
           val principals = tuples.map(_._2).distinct.map{ p => PrincipalAPI(p.nconst, p.primaryName.getOrElse(""), p.birthYear.getOrElse(0))}
           val writers = tuples.flatMap(_._3).distinct.map{ w => CrewAPI(w.nconst, w.primaryName.getOrElse(""), w.birthYear.getOrElse(0), "writer")}
           val directors = tuples.flatMap(_._4).distinct.map{ d => CrewAPI(d.nconst, d.primaryName.getOrElse(""), d.birthYear.getOrElse(0), "director")}
-          MovieAPI(
+          MovieSummaryAPI(
             movie.tconst,
             movie.titleType.getOrElse(""),
             movie.primaryTitle.getOrElse(""),

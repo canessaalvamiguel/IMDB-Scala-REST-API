@@ -16,7 +16,7 @@ import scala.util.{Failure, Success, Try}
 class APIController @Inject()(cc : ControllerComponents, movieService: MovieService) extends AbstractController(cc) {
 
   val logger: Logger = Logger(this.getClass())
-  implicit val todoFormat = Json.format[MovieAPI]
+  implicit val todoFormat = Json.format[MovieSummaryAPI]
 
   def getMovieSummary(filter: String) = Action.async { implicit request: Request[AnyContent] =>
 

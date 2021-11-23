@@ -11,7 +11,7 @@ import scala.util.Try
 import akka.pattern.ask
 import com.google.inject.Inject
 import dao.MovieStorage
-import models.MovieAPI
+import models.MovieSummaryAPI
 
 @Singleton
 class MovieService @Inject() (moviesStorage: MovieStorage){
@@ -25,8 +25,8 @@ class MovieService @Inject() (moviesStorage: MovieStorage){
   val system = ActorSystem("MovieActorSystem")
   val movieStorage = system.actorOf(MovieStorage.props, "MovieActorStorage")
 
-  def getMovieSummary(filter: String) : Future[Try[Seq[MovieAPI]]] = {
-      (movieStorage ?  MovieSummary(filter)).mapTo[Try[Seq[MovieAPI]]]
+  def getMovieSummary(filter: String) : Future[Try[Seq[MovieSummaryAPI]]] = {
+      (movieStorage ?  MovieSummary(filter)).mapTo[Try[Seq[MovieSummaryAPI]]]
   }
 
 }
