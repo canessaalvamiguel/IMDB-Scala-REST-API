@@ -1,8 +1,9 @@
 package dao
 
 import com.google.inject.Inject
-import models.{CrewAPI, MovieSummaryAPI, Name, PrincipalAPI, TitleBasics, TitleCrew, TitlePrincipal}
+import models.{CrewAPI, MovieNameAPI, MovieSummaryAPI, Name, PrincipalAPI, TitleBasics, TitleCrew, TitlePrincipal, TitleRating}
 import play.api.db.slick.{DatabaseConfigProvider, HasDatabaseConfigProvider}
+import slick.ast.StructNode
 import slick.jdbc.JdbcProfile
 import slick.jdbc.PostgresProfile.api._
 
@@ -50,16 +51,23 @@ class NameTableDef(tag: Tag) extends Table[Name](tag, "name_basics"){
   override def * = (nconst, primaryName, birthYear, deathYear, primaryProfession, knownForTitles) <> (Name.tupled, Name.unapply)
 }
 
+class RatingTableDef(tag: Tag) extends Table[TitleRating](tag, "title_ratings"){
+  def tconst = column[String]("tconst")
+  def averageRating = column[Option[Double]]("averagerating")
+  def numVotes = column[Option[Int]]("numvotes")
+  override def * = (tconst, averageRating, numVotes) <> (TitleRating.tupled, TitleRating.unapply)
+}
+
 @Singleton
 class MovieDao @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)(implicit executionContext: ExecutionContext) extends HasDatabaseConfigProvider[JdbcProfile]{
 
-  var movieList = TableQuery[MovieTableDef]
-  var crewList = TableQuery[CrewTableDef]
-  var principalList = TableQuery[PrincipalTableDef]
-  var namelList = TableQuery[NameTableDef]
+  val movieList = TableQuery[MovieTableDef]
+  val crewList = TableQuery[CrewTableDef]
+  val principalList = TableQuery[PrincipalTableDef]
+  val namelList = TableQuery[NameTableDef]
+  val ratingList = TableQuery[RatingTableDef]
 
-  def getMovieQuery(filter: String) = {
-    //val movieQuery = movieList.filter(_.primaryTitle like s"%$filter%")
+  def getMovieSummaryQuery(filter: String) = {
     val movieQuery = movieList.filter{
       movie =>
         movie.primaryTitle === filter || movie.originalTitle === filter
@@ -85,7 +93,7 @@ class MovieDao @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
   }
 
   def getMovieSummary(filter: String): Future[Try[Seq[MovieSummaryAPI]]] = {
-    dbConfig.db.run(getMovieQuery(filter).result).map{ dataTuples  =>
+    dbConfig.db.run(getMovieSummaryQuery(filter).result).map{ dataTuples  =>
       val grouperByMovie = dataTuples.groupBy(_._1)
       Success(grouperByMovie.map {
         case (movie,tuples) =>
@@ -107,4 +115,8 @@ class MovieDao @Inject()(protected val dbConfigProvider: DatabaseConfigProvider)
       }
     }
   }
+
+  def getTopRatedMoviesByGenreQuery(genre: String) = ???
+
+  def getTopRatedMoviesByGenre(genre: String): Future[Try[Seq[MovieNameAPI]]] = ???
 }
