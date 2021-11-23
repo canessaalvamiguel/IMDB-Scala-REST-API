@@ -24,6 +24,12 @@ case class MovieSummaryAPI(
   principals: Seq[PrincipalAPI]
 )
 
+case class MovieNameAPI(
+  name: String,
+  rating: Double,
+  numVotes: Int
+)
+
 object PrincipalAPI{
   implicit val principalFormat = Json.format[PrincipalAPI]
 }
@@ -32,6 +38,10 @@ object CrewAPI{
   implicit val crewFormat = Json.format[CrewAPI]
 }
 
-object MoviAPI{
-  implicit val movieFormat = Json.format[MovieSummaryAPI]
+object MovieSummaryAPI{
+  implicit val movieSummaryFormat = Json.format[MovieSummaryAPI]
+}
+
+object MovieNameAPI{
+  implicit val movieNameFormat = Json.format[MovieNameAPI]
 }
